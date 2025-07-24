@@ -2,7 +2,7 @@
 
 Welcome to the Web3Bridge Cohort XIII training program! This repository is used for submitting tasks, tracking student progress, and grading assessments. Follow this guide to ensure a smooth contribution process.
 
----
+--- 
 
 ## For Students: Submitting Your Tasks
 
@@ -148,3 +148,4 @@ git push origin main
 - Merge the PR after approval.
 
 Thank you for contributing to Web3Bridge Cohort XIII! Happy coding!
+

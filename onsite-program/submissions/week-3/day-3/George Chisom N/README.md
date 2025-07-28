@@ -49,4 +49,4 @@ When working with visibility specifiers in Solidity, think of your smart contrac
 
 •	Plan for inheritance with internal: If you’re building contracts that inherit from each other (like a base contract for a bank and child contracts for savings accounts), use internal for variables and functions you want to share with those child contracts. This is like sharing a family recipe with your kids but not with strangers.
 
-This readMe is to help beginners in the web3 space to have bed rock knowledge about visibity specifiers and what it contains. Although there are others involve that are not mentioned here.
+This readMe file is to help beginners in the web3 space to have bed rock knowledge about visibity specifiers and what it contains. Although there are others involve that are not mentioned here.

@@ -119,6 +119,8 @@ typings/
 node_modules
 .env
 
+onsite-program/tasks/week-3/Abasiodiong-udofia
+
 # Hardhat files
 /cache
 /artifacts

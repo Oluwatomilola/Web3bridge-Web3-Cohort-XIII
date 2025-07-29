@@ -1,4 +1,4 @@
-# Solidity Visibility Specifiers Summary
+# Solidity Visibility Specifiers Explained
 
 In Solidity, visibility specifiers define how and where variables and functions can be accessed. They control the accessibility of contract elements, ensuring security and modularity. There are four visibility specifiers: `public`, `private`, `internal`, and `external`. Below is a summary of their behavior for variables and functions.
 

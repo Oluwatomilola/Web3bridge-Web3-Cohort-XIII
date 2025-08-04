@@ -5,7 +5,19 @@ import "../interfaces/ISchool.sol";
 // import "../contracts/libraries/Storage.sol";
 
 contract School is ISchool {
-    Student[] students;
+    Student[] public students;
+    // address owner;
+    //
+    // error ONLY_OWNER_CAN_CALL();
+    //
+    // constructor() {
+    //     owner = msg.sender;
+    // }
+    //
+    // modifier OnlyOwner() {
+    //     require(owner == msg.sender, ONLY_OWNER_CAN_CALL());
+    //     _;
+    // }
 
     mapping(address => Student[]) get_student_by_address_array;
 
@@ -29,5 +41,9 @@ contract School is ISchool {
 
     function get_students() external view returns (Student[] memory) {
         return students;
+    }
+
+    function get_students_length() external view returns (uint256) {
+        return students.length;
     }
 }

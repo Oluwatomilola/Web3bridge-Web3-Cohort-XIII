@@ -12,4 +12,6 @@ interface ISchool {
     function get_students() external view returns (Student[] memory);
 
     function register_student_(string memory _name, uint256 _age) external;
+
+    function get_students_length() external view returns (uint256);
 }

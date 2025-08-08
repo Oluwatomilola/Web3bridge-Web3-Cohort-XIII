@@ -1,51 +1,135 @@
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { MultisigFactory, MultisigWallet } from "../typechain-types";
+const {
+  loadFixture,
+} = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+const { expect } = require("chai");
+const hre = require("hardhat");
 
-describe("MultisigFactory + MultisigWallet (3-of-N) — no events, TypeScript", function () {
-  it("deploys wallet through factory, requires 3 confirmations, and executes transfer after 3 confirmations", async function () {
-    const [deployer, owner1, owner2, owner3, owner4, recipient] = await ethers.getSigners();
+describe("Multisig", function () {
+  async function deployMultiSigFixture() {
+    const [owner1, owner2, owner3, owner4, owner5, recipient] =
+      await hre.ethers.getSigners();
 
-    const FactoryFactory = await ethers.getContractFactory("MultisigFactory");
-    const factory = (await FactoryFactory.deploy()) as MultisigFactory;
-    await factory.deployed();
+    const Multisig = await hre.ethers.getContractFactory("Multisig");
+    const multiSig = await Multisig.deploy([
+      owner1.address,
+      owner2.address,
+      owner3.address,
+      owner4.address,
+      owner5.address,
+    ]);
 
-    const owners = [owner1.address, owner2.address, owner3.address, owner4.address];
-    const required = 3;
+    // Send some ETH to the contract
+    await owner1.sendTransaction({
+      to: multiSig.target,
+      value: hre.ethers.parseEther("10"),
+    });
 
-    await factory.createWallet(owners, required);
+    return { multiSig, owner1, owner2, owner3, owner4, owner5, recipient };
+  }
 
-    const wallets = await factory.getWallets();
-    const walletAddress = wallets[wallets.length - 1];
+  describe("Constructor", function () {
+    it("should set the five owners correctly", async function () {
+      const { multiSig, owner1, owner2, owner3, owner4, owner5 } =
+        await loadFixture(deployMultiSigFixture);
 
-    const WalletFactory = await ethers.getContractFactory("MultisigWallet");
-    const wallet = WalletFactory.attach(walletAddress) as MultisigWallet;
+      expect(await multiSig.isOwner(owner1.address)).to.be.true;
+      expect(await multiSig.isOwner(owner2.address)).to.be.true;
+      expect(await multiSig.isOwner(owner3.address)).to.be.true;
+      expect(await multiSig.isOwner(owner4.address)).to.be.true;
+      expect(await multiSig.isOwner(owner5.address)).to.be.true;
+    });
+  });
 
-    await deployer.sendTransaction({ to: wallet.address, value: ethers.utils.parseEther("1.0") });
+  describe("submitTransaction", function () {
+    it("should submit a transaction successfully", async function () {
+      const { multiSig, owner1, recipient } = await loadFixture(
+        deployMultiSigFixture
+      );
 
-    const beforeRecipientBal = await ethers.provider.getBalance(recipient.address);
+      await multiSig
+        .connect(owner1)
+        .submitTransaction(recipient.address, hre.ethers.parseEther("1"), "0x");
 
-    const walletAsOwner1 = wallet.connect(owner1);
-    await walletAsOwner1.submitTransaction(recipient.address, ethers.utils.parseEther("0.6"), "0x");
+      const [to, value, data, executed, signatures] =
+        await multiSig.getTransaction(0);
+      expect(to).to.equal(recipient.address);
+      expect(value).to.equal(hre.ethers.parseEther("1"));
+      expect(data).to.equal("0x");
+      expect(executed).to.be.false;
+      expect(signatures).to.equal(0);
+    });
+  });
 
-    let txInfo = await wallet.getTransaction(0);
-    expect(txInfo.numConfirmations).to.equal(1);
+  describe("signTransaction", function () {
+    it("should sign a transaction and increase signature count", async function () {
+      const { multiSig, owner1, owner2, recipient } = await loadFixture(
+        deployMultiSigFixture
+      );
 
-    await wallet.connect(owner2).confirmTransaction(0);
-    txInfo = await wallet.getTransaction(0);
-    expect(txInfo.numConfirmations).to.equal(2);
+      // Submit transaction
+      await multiSig
+        .connect(owner1)
+        .submitTransaction(recipient.address, hre.ethers.parseEther("1"), "0x");
 
-    await wallet.connect(owner3).confirmTransaction(0);
-    txInfo = await wallet.getTransaction(0);
-    expect(txInfo.numConfirmations).to.equal(3);
+      // Sign transaction
+      await multiSig.connect(owner1).signTransaction(0);
 
-    await walletAsOwner1.executeTransaction(0);
+      const [, , , , signatures] = await multiSig.getTransaction(0);
+      expect(signatures).to.equal(1);
+    });
+  });
 
-    const afterRecipientBal = await ethers.provider.getBalance(recipient.address);
-    const diff = afterRecipientBal.sub(beforeRecipientBal);
-    expect(diff).to.equal(ethers.utils.parseEther("0.6"));
+  describe("getTransaction", function () {
+    it("should return transaction details correctly", async function () {
+      const { multiSig, owner1, recipient } = await loadFixture(
+        deployMultiSigFixture
+      );
 
-    txInfo = await wallet.getTransaction(0);
-    expect(txInfo.executed).to.equal(true);
+      await multiSig
+        .connect(owner1)
+        .submitTransaction(
+          recipient.address,
+          hre.ethers.parseEther("2"),
+          "0x1234"
+        );
+
+      const [to, value, data, executed, signatures] =
+        await multiSig.getTransaction(0);
+      expect(to).to.equal(recipient.address);
+      expect(value).to.equal(hre.ethers.parseEther("2"));
+      expect(data).to.equal("0x1234");
+      expect(executed).to.be.false;
+      expect(signatures).to.equal(0);
+    });
+  });
+
+  describe("isOwner", function () {
+    it("should return true for valid owner", async function () {
+      const { multiSig, owner1 } = await loadFixture(deployMultiSigFixture);
+
+      expect(await multiSig.isOwner(owner1.address)).to.be.true;
+    });
+  });
+
+  describe("receive", function () {
+    it("should accept ETH payments", async function () {
+      const { multiSig, owner1 } = await loadFixture(deployMultiSigFixture);
+
+      const initialBalance = await hre.ethers.provider.getBalance(
+        multiSig.target
+      );
+
+      await owner1.sendTransaction({
+        to: multiSig.target,
+        value: hre.ethers.parseEther("5"),
+      });
+
+      const finalBalance = await hre.ethers.provider.getBalance(
+        multiSig.target
+      );
+      expect(finalBalance - initialBalance).to.equal(
+        hre.ethers.parseEther("5")
+      );
+    });
   });
 });

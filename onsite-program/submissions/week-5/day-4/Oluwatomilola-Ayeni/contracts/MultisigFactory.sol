@@ -1,18 +1,38 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+//SPDX-License-Identifier: UNLICENSED
 
-import "./MultisigWallet.sol";
+pragma solidity 0.8.26;
+
+import "./Multisig.sol";
+
 
 contract MultisigFactory {
-    address[] public wallets;
+ 
 
-    function createWallet(address[] calldata owners, uint required) external returns (address) {
-        MultisigWallet wallet = new MultisigWallet(owners, required);
-        wallets.push(address(wallet));
-        return address(wallet);
+    address[] public deployedMultisigs;
+
+    function createMultisig(address[5] memory owners) external returns (address) {
+        for (uint i = 0; i < owners.length; i++) {
+            require(owners[i] != address(0), "Owner address cannot be zero");
+            
+            for (uint j = i + 1; j < owners.length; j++) {
+                require(owners[i] != owners[j], "Duplicate owner address");
+            }
+        }
+
+        Multisig newMultisig = new Multisig(owners);
+        address multisigAddress = address(newMultisig);
+        
+        deployedMultisigs.push(multisigAddress);
+        
+        
+        return multisigAddress;
     }
 
-    function getWallets() external view returns (address[] memory) {
-        return wallets;
+    function getDeployedMultisigs() external view returns (address[] memory) {
+        return deployedMultisigs;
+    }
+
+    function getDeployedMultisigsCount() external view returns (uint256) {
+        return deployedMultisigs.length;
     }
 }

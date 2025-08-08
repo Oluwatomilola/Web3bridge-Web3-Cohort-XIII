@@ -6,7 +6,7 @@ import { vars } from "hardhat/config";
 const PRIVATE_KEY = vars.get("PRIVATE_KEY");
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.28",
+  solidity: "0.8.26",
   networks: {
     liskTestnet: {
       url: "https://rpc.sepolia-api.lisk.com",

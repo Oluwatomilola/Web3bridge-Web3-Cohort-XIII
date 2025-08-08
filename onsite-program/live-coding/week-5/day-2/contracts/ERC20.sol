@@ -6,6 +6,8 @@ import "../interface/IERC20.sol";
 contract ERC20 is IERC20 {
     uint256 constant _totalSupply = 1000 * 10e18;
 
+    error You_dont_have_enough_priviledge();
+
     mapping(address => uint256) balance;
 
     mapping(address => mapping(address => uint256)) set_allowance;
@@ -58,11 +60,11 @@ contract ERC20 is IERC20 {
     }
 
     // Allows a third party to transfer on a user behalf
-    function trasferFrom(address _owner, address _receipient, uint256 _amount) external returns (bool) {
+    function transferFrom(address _owner, address _receipient, uint256 _amount) external returns (bool) {
         uint256 owner_balance = this.balanceOf(_owner);
         uint256 _spender_allowance = set_allowance[_owner][msg.sender];
 
-        require(owner_balance > _amount && _spender_allowance > _amount, "You don't have enough priviledge");
+        require(owner_balance > _amount && _spender_allowance > _amount, You_dont_have_enough_priviledge());
 
         balance[_owner] -= _amount;
         set_allowance[_owner][msg.sender] -= _amount;

@@ -1,0 +1,3 @@
+[submodule "onsite-program/live-coding/week-5/day-4/Foundry101/lib/forge-std"]
+	path = onsite-program/live-coding/week-5/day-4/Foundry101/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

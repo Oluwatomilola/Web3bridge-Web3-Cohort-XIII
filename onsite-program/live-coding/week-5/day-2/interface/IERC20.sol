@@ -21,7 +21,7 @@ interface IERC20 {
     function balanceOf(address _addy) external view returns (uint256);
 
     // Allows a third party to transfer on a user behalf
-    function trasferFrom(address _owner, address _receipient, uint256 _amount) external returns (bool);
+    function transferFrom(address _owner, address _receipient, uint256 _amount) external returns (bool);
 
     // check if a specific address holds spending power
     function approve(address _spender, uint256 _amount) external returns (bool);

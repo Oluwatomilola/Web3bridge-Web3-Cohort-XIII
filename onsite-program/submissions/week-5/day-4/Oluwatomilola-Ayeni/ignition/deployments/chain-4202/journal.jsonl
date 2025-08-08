@@ -1,0 +1,3 @@
+
+{"chainId":4202,"type":"DEPLOYMENT_INITIALIZE"}
+{"artifactId":"MultisigWalletModule#MultisigWallet","constructorArgs":[["0x516a7D66B428dF27607E626df2A276b9b0B30a80","0xabcd...","0x5678..."],3],"contractName":"MultisigWallet","dependencies":[],"from":"0x516a7d66b428df27607e626df2a276b9b0b30a80","futureId":"MultisigWalletModule#MultisigWallet","futureType":"NAMED_ARTIFACT_CONTRACT_DEPLOYMENT","libraries":{},"strategy":"basic","strategyConfig":{},"type":"DEPLOYMENT_EXECUTION_STATE_INITIALIZE","value":{"_kind":"bigint","value":"0"}}

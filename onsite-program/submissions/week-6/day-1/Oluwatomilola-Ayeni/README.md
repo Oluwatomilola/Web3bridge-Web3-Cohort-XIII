@@ -11,8 +11,10 @@ Objective
 * And if they intend to withdraw before the lock period that should incur a 3% breaking fee that would be transferred to the account of the deployer of the factory.
 
 RoadMap
-Piggybank : Saving Plan - Lock Period : 3months, 6months, and 12 months plan
-* Interest rates
+Piggybank : 
+Deposits, Save, Withdraw, 
+Saving Plan - Lock Period : 3months, 6months, and 12 months plan
+* Interest rates for saving 
 * Penalty 3% for withdrawal before lock time
 * 
 * 
@@ -25,6 +27,10 @@ Piggybank : Saving Plan - Lock Period : 3months, 6months, and 12 months plan
 * Can track the lock period each savings plan
 * 
 Child contract: savings plan
+
+User: address, name, 
+
+
 
 <!-- 
 # Sample Hardhat Project

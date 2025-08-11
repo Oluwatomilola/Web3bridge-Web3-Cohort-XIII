@@ -1,127 +1,170 @@
-import {
-  time,
-  loadFixture,
-} from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
-import hre from "hardhat";
+import { ethers } from "hardhat";
+import type { ContractTransactionReceipt, ContractTransactionResponse } from "ethers";
 
-describe("Lock", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
-  async function deployOneYearLockFixture() {
-    const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-    const ONE_GWEI = 1_000_000_000;
+const MIN_LOCK_AMOUNT_ETH = ethers.parseEther("0.01");
+const BREAKING_FEE_PERCENT = 3n;
+const BREAKING_FEE_DIVISOR = 100n;
 
-    const lockedAmount = ONE_GWEI;
-    const unlockTime = (await time.latest()) + ONE_YEAR_IN_SECS;
-
-    // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount] = await hre.ethers.getSigners();
-
-    const Lock = await hre.ethers.getContractFactory("Lock");
-    const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-    return { lock, unlockTime, lockedAmount, owner, otherAccount };
+async function getEventArgs(
+  tx: ContractTransactionResponse,
+  contractInterface: any,
+  eventName: string
+) {
+  const receipt: ContractTransactionReceipt = await tx.wait();
+  for (const log of receipt.logs) {
+    try {
+      const parsed = contractInterface.parseLog(log);
+      if (parsed.name === eventName) {
+        return parsed.args;
+      }
+    } catch {
+      continue;
+    }
   }
+  throw new Error(`Event ${eventName} not found`);
+}
 
-  describe("Deployment", function () {
-    it("Should set the right unlockTime", async function () {
-      const { lock, unlockTime } = await loadFixture(deployOneYearLockFixture);
+describe("PiggyBankFactory + PiggyBankSavings", function () {
+  let deployer: any;
+  let alice: any;
+  let bob: any;
+  let factory: any;
 
-      expect(await lock.unlockTime()).to.equal(unlockTime);
-    });
+  beforeEach(async function () {
+    [deployer, alice, bob] = await ethers.getSigners();
 
-    it("Should set the right owner", async function () {
-      const { lock, owner } = await loadFixture(deployOneYearLockFixture);
+    const Factory = await ethers.getContractFactory("PiggyBankFactory", deployer);
+    factory = await Factory.deploy();
+    await factory.waitForDeployment();
+  });
 
-      expect(await lock.owner()).to.equal(owner.address);
-    });
-
-    it("Should receive and store the funds to lock", async function () {
-      const { lock, lockedAmount } = await loadFixture(
-        deployOneYearLockFixture
-      );
-
-      expect(await hre.ethers.provider.getBalance(lock.target)).to.equal(
-        lockedAmount
-      );
-    });
-
-    it("Should fail if the unlockTime is not in the future", async function () {
-      // We don't use the fixture here because we want a different deployment
-      const latestTime = await time.latest();
-      const Lock = await hre.ethers.getContractFactory("Lock");
-      await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith(
-        "Unlock time should be in the future"
-      );
+  describe("Factory negative cases", function () {
+    it("should revert if ERC20 savings created with zero token address", async function () {
+      await expect(
+        factory.connect(alice).createSavings("Bad", 0, false, ethers.ZeroAddress)
+      ).to.be.revertedWith("Invalid token address");
     });
   });
 
-  describe("Withdrawals", function () {
-    describe("Validations", function () {
-      it("Should revert with the right error if called too soon", async function () {
-        const { lock } = await loadFixture(deployOneYearLockFixture);
+  describe("Factory / ETH savings flow", function () {
+    it("should revert if ETH deposit is zero", async function () {
+      const tx = await factory
+        .connect(alice)
+        .createSavings("Alice ETH Save", 0, true, ethers.ZeroAddress);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
 
-        await expect(lock.withdraw()).to.be.revertedWith(
-          "You can't withdraw yet"
-        );
-      });
-
-      it("Should revert with the right error if called from another account", async function () {
-        const { lock, unlockTime, otherAccount } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        // We can increase the time in Hardhat Network
-        await time.increaseTo(unlockTime);
-
-        // We use lock.connect() to send a transaction from another account
-        await expect(lock.connect(otherAccount).withdraw()).to.be.revertedWith(
-          "You aren't the owner"
-        );
-      });
-
-      it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-        const { lock, unlockTime } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        // Transactions are sent using the first signer by default
-        await time.increaseTo(unlockTime);
-
-        await expect(lock.withdraw()).not.to.be.reverted;
-      });
+      await expect(
+        alice.sendTransaction({
+          to: savings.target,
+          value: 0n,
+          data: savings.interface.encodeFunctionData("deposit", [0n]),
+        })
+      ).to.be.revertedWith("Deposit below minimum");
     });
 
-    describe("Events", function () {
-      it("Should emit an event on withdrawals", async function () {
-        const { lock, unlockTime, lockedAmount } = await loadFixture(
-          deployOneYearLockFixture
-        );
+    it("should revert if withdraw amount exceeds balance", async function () {
+      const tx = await factory
+        .connect(alice)
+        .createSavings("Alice ETH Save", 0, true, ethers.ZeroAddress);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
 
-        await time.increaseTo(unlockTime);
-
-        await expect(lock.withdraw())
-          .to.emit(lock, "Withdrawal")
-          .withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
+      const depositValue = ethers.parseEther("0.02");
+      await alice.sendTransaction({
+        to: savings.target,
+        value: depositValue,
+        data: savings.interface.encodeFunctionData("deposit", [0n]),
       });
+
+      await expect(
+        savings.connect(alice).withdraw(ethers.parseEther("0.03"))
+      ).to.be.revertedWith("Insufficient balance");
+    });
+  });
+
+  describe("ERC20 savings flow", function () {
+    let erc20: any;
+
+    beforeEach(async function () {
+      const Token = await ethers.getContractFactory("ERC20PresetMinterPauser");
+      erc20 = await Token.deploy("Test Token", "TST");
+      await erc20.waitForDeployment();
     });
 
-    describe("Transfers", function () {
-      it("Should transfer the funds to the owner", async function () {
-        const { lock, unlockTime, lockedAmount, owner } = await loadFixture(
-          deployOneYearLockFixture
-        );
+    it("should revert if deposit below ERC20 minimum", async function () {
+      await erc20.connect(deployer).mint(alice.address, ethers.parseEther("10"));
 
-        await time.increaseTo(unlockTime);
+      const tx = await factory
+        .connect(alice)
+        .createSavings("Small ERC20", 0, false, erc20.target);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
 
-        await expect(lock.withdraw()).to.changeEtherBalances(
-          [owner, lock],
-          [lockedAmount, -lockedAmount]
-        );
+      await erc20.connect(alice).approve(savings.target, ethers.parseEther("0.0001"));
+
+      // The contract's check is `amount >= MINIMUM_LOCK_AMOUNT / 1e18`
+      await expect(
+        savings.connect(alice).deposit(0n)
+      ).to.be.revertedWith("Amount below minimum");
+    });
+
+    it("should revert if transferFrom fails (no allowance)", async function () {
+      await erc20.connect(deployer).mint(alice.address, ethers.parseEther("10"));
+
+      const tx = await factory
+        .connect(alice)
+        .createSavings("No Approve", 0, false, erc20.target);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
+
+      await expect(
+        savings.connect(alice).deposit(ethers.parseEther("1"))
+      ).to.be.reverted; // transferFrom should fail
+    });
+
+    it("should revert if withdraw amount exceeds ERC20 balance", async function () {
+      await erc20.connect(deployer).mint(alice.address, ethers.parseEther("10"));
+
+      const tx = await factory
+        .connect(alice)
+        .createSavings("Too Much ERC20", 0, false, erc20.target);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
+
+      const depositAmount = ethers.parseEther("5");
+      await erc20.connect(alice).approve(savings.target, depositAmount);
+      await savings.connect(alice).deposit(depositAmount);
+
+      await expect(
+        savings.connect(alice).withdraw(ethers.parseEther("6"))
+      ).to.be.revertedWith("Insufficient balance");
+    });
+  });
+
+  describe("Positive flows (short form)", function () {
+    it("ETH early withdraw applies penalty", async function () {
+      const tx = await factory
+        .connect(alice)
+        .createSavings("ETH Save", 0, true, ethers.ZeroAddress);
+      const args = await getEventArgs(tx, factory.interface, "SavingsCreated");
+      const savings = await ethers.getContractAt("PiggyBankSavings", args.savingsContract);
+
+      const depositValue = ethers.parseEther("1");
+      await alice.sendTransaction({
+        to: savings.target,
+        value: depositValue,
+        data: savings.interface.encodeFunctionData("deposit", [0n]),
       });
+
+      const withdrawAmount = ethers.parseEther("0.5");
+      const factoryBalanceBefore = await ethers.provider.getBalance(factory.target);
+      await savings.connect(alice).withdraw(withdrawAmount);
+      const factoryBalanceAfter = await ethers.provider.getBalance(factory.target);
+
+      const expectedPenalty = (withdrawAmount * BREAKING_FEE_PERCENT) / BREAKING_FEE_DIVISOR;
+      expect(factoryBalanceAfter).to.equal(factoryBalanceBefore + expectedPenalty);
     });
   });
 });

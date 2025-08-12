@@ -4,3 +4,12 @@
 [submodule "onsite-program/live-coding/week-5/day-4/Foundry101/lib/openzeppelin-contracts"]
 	path = onsite-program/live-coding/week-5/day-4/Foundry101/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/forge-std"]
+	path = onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/openzeppelin-contracts"]
+	path = onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/v3-periphery"]
+	path = onsite-program/submissions/week-6/day-2/Oluwatomilola-Ayeni/permit-uniswap-swap/lib/v3-periphery
+	url = https://github.com/Uniswap/v3-periphery

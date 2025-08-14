@@ -1,0 +1,2 @@
+echo "chainlink-evm/=lib/chainlink-evm/contracts/src/v0.8/" > remappings.txt
+echo "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/" >> remappings.txt

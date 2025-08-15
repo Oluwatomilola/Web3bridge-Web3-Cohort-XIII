@@ -28,7 +28,7 @@ contract LootBoxTest is Test {
 
     function setUp() public {
         mockVRF = new MockVRFCoordinatorV2();
-        lootBox = new LootBox(boxFee, subscriptionId, address(mockVRF), keyHash);
+        lootBox = new LootBox(boxFee, uint64(subscriptionId), address(mockVRF), keyHash);
 
         mockERC20 = new MockERC20();
         mockERC721 = new MockERC721();
@@ -68,7 +68,7 @@ contract LootBoxTest is Test {
         lootBox.openBox{value: 0}();
 
         // Check no rewards
-        LootBox emptyBox = new LootBox(boxFee, subscriptionId, address(mockVRF), keyHash);
+        LootBox emptyBox = new LootBox(boxFee, uint64(subscriptionId), address(mockVRF), keyHash);
         vm.expectRevert("No rewards available");
         emptyBox.openBox{value: boxFee}();
     }

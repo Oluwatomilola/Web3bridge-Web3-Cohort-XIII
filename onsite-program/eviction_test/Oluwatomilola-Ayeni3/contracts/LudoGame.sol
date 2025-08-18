@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title Ludo Game (single-token-per-player)
-/// @notice Demo implementation with up to 4 registered players, turn order,
-///         pseudo-random dice, and basic move rules. Not for mainnet production.
 contract Ludo {
     // ===== Types =====
     enum Color { RED, GREEN, BLUE, YELLOW }

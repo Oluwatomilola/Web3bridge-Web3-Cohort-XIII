@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-// Ethers v6-style tests
+
 
 describe("Ludo", function () {
   async function deploy() {
@@ -100,69 +100,11 @@ describe("Ludo", function () {
     expect(aPlayer.score).to.equal(1);
   });
 });
-```
 
----
 
-## hardhat.config.ts
 
-```ts
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
 
-const config: HardhatUserConfig = {
-  solidity: {
-    version: "0.8.24",
-    settings: {
-      optimizer: { enabled: true, runs: 200 },
-      viaIR: false,
-    },
-  },
-  paths: {
-    sources: "./contracts",
-    tests: "./test",
-    cache: "./cache",
-    artifacts: "./artifacts",
-  },
-  mocha: { timeout: 120_000 },
-};
 
-export default config;
-```
 
----
 
-## package.json
 
-```json
-{
-  "name": "ludo-solidity",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "build": "hardhat compile",
-    "test": "hardhat test"
-  },
-  "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.6",
-    "typescript": "^5.6.2"
-  }
-}
-```
-
----
-
-## tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["node", "mocha"]
-  }
